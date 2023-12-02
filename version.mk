@@ -1,5 +1,5 @@
 ROLLNAME = sge
-RELEASE = 0
+RELEASE = UCR
 COLOR   = plum
 
 REDHAT.ROOT = $(PWD)
