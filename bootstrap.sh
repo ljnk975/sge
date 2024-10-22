@@ -115,8 +115,7 @@ fi
 . $ROLLSROOT/etc/bootstrap-functions.sh
 
 make rpm-mkdirs
-yum -y install hwloc-devel
-install_os_packages sge-server
+yum -y install csh automake hwloc-devel openssl-devel pam-devel libXt-devel motif-devel
+#install_os_packages sge-server
 bootstrap_py_init
-install_os_packages sge-base
-
+#install_os_packages sge-base

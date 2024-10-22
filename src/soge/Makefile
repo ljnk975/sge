@@ -186,11 +186,15 @@ include Rules.mk
 
 build:
 	$(TAR) -xzf $(NAME)-$(VERSION).tar.gz
-	# cd $(NAME)-$(VERSION); patch -p1 < ../patch
-	cd $(NAME)-$(VERSION)/source; scripts/bootstrap.sh
-	cd $(NAME)-$(VERSION)/source; ./aimk -only-depend 
-	cd $(NAME)-$(VERSION)/source; ./aimk
-	cd $(NAME)-$(VERSION)/source; ./aimk -man 
+	cd $(NAME)-$(VERSION); patch -p1 < ../patch
+	(								\
+		cd $(NAME)-$(VERSION)/source ; 						\
+		scripts/bootstrap.sh -no-java -no-jni; \
+		SGE_INPUT_CFLAGS="-I/usr/include/tirpc" \
+		SGE_INPUT_LDFLAGS="-ltirpc" \
+		./aimk -no-java -no-jni ; \
+		./aimk -man -no-java -no-jni ; \
+	)
 
 install::
 	mkdir -p $(ROOT)/$(PKGROOT)

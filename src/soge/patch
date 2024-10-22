@@ -1,75 +1,263 @@
-diff -ru GE2011.11p1.orig/source/aimk.site GE2011.11p1/source/aimk.site
---- GE2011.11p1.orig/source/aimk.site	2012-05-23 12:05:00.000000000 -0700
-+++ GE2011.11p1/source/aimk.site	2012-09-07 12:37:06.625448973 -0700
-@@ -76,14 +76,20 @@
- # OPENSSL_HOME the directory where the include and lib directory of openssl
- # is installed
- #
--set OPENSSL_SOVERSION = 0.9.8h
--set OPENSSL_HOME = /build/openssl-install
-+set OPENSSL_SOVERSION = 1.0.0
-+set OPENSSL_HOME = /usr
+diff -ru org/source/libs/comm/cl_ssl_framework.c patch/source/libs/comm/cl_ssl_framework.c
+--- org/source/libs/comm/cl_ssl_framework.c	2016-02-28 23:58:51.000000000 +0700
++++ patch/source/libs/comm/cl_ssl_framework.c	2024-10-22 13:14:31.185122017 +0700
+@@ -484,7 +484,7 @@
+ static int ssl_callback_SSLVerify_CRL(int ok, X509_STORE_CTX *ctx, cl_com_ssl_private_t* private) {
+    X509 *cert = NULL;
+    X509_LOOKUP *lookup = NULL;
+-   X509_STORE_CTX verify_ctx;
++   X509_STORE_CTX *verify_ctx;
+    int err;
+    int is_ok = true; 
+    SGE_STRUCT_STAT stat_buffer;
+@@ -497,7 +497,9 @@
+    if (private->ssl_setup->ssl_crl_file == NULL || SGE_STAT(private->ssl_setup->ssl_crl_file, &stat_buffer)) {
+       CL_LOG(CL_LOG_INFO,"no crl checking");
+       return true;
+-   }   
++   }
 +
-+# 
-+# POSTGRES_HOME the directory where the include and lib directory of 
-+# PostgreSQL is installed
-+#
-+set POSTGRES_HOME = $PWD
++   verify_ctx = X509_STORE_CTX_new();
  
- # 
- # BERKELEYDB_HOME the directory where the include and lib directory of
- # Berkeley DB is installed
- #
--set BERKELEYDB_HOME = /build/berkeleydb
-+set BERKELEYDB_HOME = /usr
- set BDB_INCLUDE_SUBDIR =
- set BDB_LIB_SUBDIR =
- set BDB_LIB_SUFFIX =
-@@ -100,31 +106,31 @@
- # KRB_HOME the directory where the include and lib directory of kerberos is
- # installed
- #
--set KRB_HOME = /vol2/tools/SW/krb5/$buildarch
-+set KRB_HOME = $PWD
+    /* create the cert store and set the verify callback */
+    if (private->ssl_crl_data->store == NULL || stat_buffer.st_mtime != private->ssl_crl_data->last_modified) {
+@@ -545,20 +547,20 @@
+    cert = X509_STORE_CTX_get_current_cert(ctx);
+    if (is_ok == true && cert != NULL) {
+        /* X509_STORE_CTX_init did not return an error condition in prior versions */
+-       if (X509_STORE_CTX_init(&verify_ctx, private->ssl_crl_data->store, cert, NULL) != 1) {
++       if (X509_STORE_CTX_init(verify_ctx, private->ssl_crl_data->store, cert, NULL) != 1) {
+           CL_LOG(CL_LOG_ERROR, "Error initializing verification context");
+           is_ok = false;
+        } else {
+           /* verify the certificate */
+-          if (X509_verify_cert(&verify_ctx) != 1) {
++          if (X509_verify_cert(verify_ctx) != 1) {
+              is_ok = false;
+           }
+        }
+        if (is_ok == false) {
+-           err = X509_STORE_CTX_get_error(&verify_ctx);
++           err = X509_STORE_CTX_get_error(verify_ctx);
+            X509_STORE_CTX_set_error(ctx, err);
+        }
+-       X509_STORE_CTX_cleanup(&verify_ctx);
++       X509_STORE_CTX_cleanup(verify_ctx);
+    } else {
+       if (is_ok == false) {
+          CL_LOG(CL_LOG_ERROR,"X509 store is not valid");
+@@ -569,6 +571,8 @@
+       is_ok = false;
+    }
  
- # 
- # man2html path
- #
--set MAN2HTMLPATH = /vol2/tools/SW/$buildarch/bin
-+set MAN2HTMLPATH = $PWD
- # 
- # groff path
- #
--set GROFFPATH = /vol2/tools/SW/$buildarch/bin
-+set GROFFPATH = $PWD
++   X509_STORE_CTX_free(verify_ctx);
++
+    return is_ok;
+ }
  
- #
- # SWIG path 
- #
--set SWIG = /vol2/tools/SW/swig-1.3.22/$buildarch/bin/swig
-+set SWIG = $PWD
+diff -ru org/source/libs/japi/drmaa2_list_dict.h patch/source/libs/japi/drmaa2_list_dict.h
+--- org/source/libs/japi/drmaa2_list_dict.h	2016-02-28 23:58:51.000000000 +0700
++++ patch/source/libs/japi/drmaa2_list_dict.h	2024-10-22 13:22:22.036130851 +0700
+@@ -10,7 +10,7 @@
+    struct _drmaa2_node *next;
+ } _drmaa2_Node;
  
- #
- # PERL path
- #
--set PERL = /vol2/tools/SW/$buildarch/bin/perl
-+set PERL = /usr/bin/perl
+-/* static */ struct drmaa2_list_s
++extern struct drmaa2_list_s
+ {
+    _drmaa2_Node   *head;
+    _drmaa2_Node   *tail;
+@@ -33,7 +33,7 @@
+   struct _drmaa2_dictentry_t* next;
+ } _drmaa2_dictentry_t;
  
- #
- # TCLSH path
- #
--set TCLSH = /vol2/tools/SW/$buildarch/bin/tclsh8.3
-+set TCLSH = /bin/tcsh
+-/* static */ struct drmaa2_dict_s
++extern struct drmaa2_dict_s
+ {
+   _drmaa2_dictentry_t    *head;
+   _drmaa2_dictentry_t    *tail;
+
+diff -ru org/source/utilbin/sge_passwd.c patch/source/utilbin/sge_passwd.c
+--- org/source/utilbin/sge_passwd.c	2016-02-28 23:58:56.000000000 +0700
++++ patch/source/utilbin/sge_passwd.c	2024-10-22 13:29:04.958138410 +0700
+@@ -280,7 +280,7 @@
+                size_t *buffer_out_length)
+ {
+    unsigned int ebuflen;
+-   EVP_CIPHER_CTX ectx;
++   EVP_CIPHER_CTX *ectx;
+    unsigned char iv[EVP_MAX_IV_LENGTH];
+    unsigned char *ekey[1]; 
+    int ekeylen=0, net_ekeylen=0;
+@@ -326,10 +326,11 @@
+    }
  
- #
- # Location of a copyright.h file which containes a copyright string
-@@ -221,8 +227,7 @@
+    memset(iv, '\0', sizeof(iv));
++   ectx = EVP_CIPHER_CTX_new();
+ #if 0
+-   ret = EVP_SealInit(&ectx, EVP_des_ede3_cbc(), ekey, &ekeylen, iv, pubKey, 1); 
++   ret = EVP_SealInit(ectx, EVP_des_ede3_cbc(), ekey, &ekeylen, iv, pubKey, 1); 
+ #else
+-   ret = EVP_SealInit(&ectx, EVP_rc4(), ekey, &ekeylen, iv, pubKey, 1); 
++   ret = EVP_SealInit(ectx, EVP_rc4(), ekey, &ekeylen, iv, pubKey, 1); 
+ #endif
+    if(ret == 0) {
+       printf("---> EVP_SealInit\n");
+@@ -352,7 +353,7 @@
+    buffer_append(buffer_out, buffer_out_size, buffer_out_length,
+                  (char*)iv, sizeof(iv));
  
+-   EVP_SealUpdate(&ectx, (unsigned char*)ebuf, 
++   EVP_SealUpdate(ectx, (unsigned char*)ebuf, 
+                                    (int*)&ebuflen, 
+                                    (const unsigned char *) buffer_in, 
+                                    buffer_in_length);
+@@ -360,13 +361,14 @@
+    buffer_append(buffer_out, buffer_out_size, buffer_out_length,
+                  ebuf, ebuflen);
  
- # set junit jar file
--# set JUNIT_JAR = '/vol2/tools/SW/java/junit3.8.1/junit.jar'
--set JUNIT_JAR = '/usr/share/java/junit.jar'
-+set JUNIT_JAR = '/opt/rocks/lib/ant-junit.jar'
+-   EVP_SealFinal(&ectx, (unsigned char *)ebuf, (int*)&ebuflen);
++   EVP_SealFinal(ectx, (unsigned char *)ebuf, (int*)&ebuflen);
  
- # set some variables which are necessary to compile GE for win32 architecture
- #
+    buffer_append(buffer_out, buffer_out_size, buffer_out_length,
+                  ebuf, ebuflen);
+ 
+    EVP_PKEY_free(pubKey[0]);
+    sge_free(&(ekey[0]));
++   EVP_CIPHER_CTX_free(ectx);
+    DEXIT;
+ }
+ 
+@@ -379,7 +381,7 @@
+    char buf[520];
+    char ebuf[512];
+    unsigned int buflen;
+-   EVP_CIPHER_CTX ectx;
++   EVP_CIPHER_CTX *ectx;
+    unsigned char iv[EVP_MAX_IV_LENGTH];
+    unsigned char *encryptKey; 
+    unsigned int ekeylen; 
+@@ -461,10 +463,11 @@
+    memcpy(&iv, curr_ptr, sizeof(iv));
+    curr_ptr += sizeof(iv);
+    buffer_in_length -= sizeof(iv);
++   ectx = EVP_CIPHER_CTX_new();
+ #if 0
+-   ret = EVP_OpenInit(&ectx, EVP_des_ede3_cbc(), encryptKey, ekeylen, iv, privateKey); 	
++   ret = EVP_OpenInit(ectx, EVP_des_ede3_cbc(), encryptKey, ekeylen, iv, privateKey); 	
+ #else
+-   ret = EVP_OpenInit(&ectx, EVP_rc4(), encryptKey, ekeylen, iv, privateKey); 	
++   ret = EVP_OpenInit(ectx, EVP_rc4(), encryptKey, ekeylen, iv, privateKey); 	
+ #endif
+    if(ret == 0) {
+       printf("----> EVP_OpenInit\n");
+@@ -484,7 +487,7 @@
+          readlen = sizeof(ebuf);
+       }
+ 
+-      ret = EVP_OpenUpdate(&ectx, (unsigned char *)buf, 
++      ret = EVP_OpenUpdate(ectx, (unsigned char *)buf, 
+                (int*)&buflen, 
+                (const unsigned char *)ebuf, readlen);
+       if (ret == 0) {
+@@ -502,7 +505,10 @@
+          buf, buflen);
+    }
+ 
+-   ret = EVP_OpenFinal(&ectx, (unsigned char *)buf, (int*)&buflen);
++   ret = EVP_OpenFinal(ectx, (unsigned char *)buf, (int*)&buflen);
++   EVP_PKEY_free(privateKey);
++   sge_free(&encryptKey);
++   EVP_CIPHER_CTX_free(ectx);
+    if (ret == 0) {
+       error_code = ERR_get_error();
+       ERR_error_string(error_code, err_msg);
+@@ -516,8 +522,6 @@
+    buffer_append(buffer_out, buffer_out_size, buffer_out_length,
+                  buf, buflen);
+ 
+-   EVP_PKEY_free(privateKey);
+-   sge_free(&encryptKey);
+    error_code = ERR_get_error();
+    if(error_code > 0) {
+       ERR_error_string(error_code, err_msg);
+
+diff -ru org/source/3rdparty/qtcsh/sh.proc.c patch/source/3rdparty/qtcsh/sh.proc.c
+--- org/source/3rdparty/qtcsh/sh.proc.c	2016-02-28 23:58:46.000000000 +0700
++++ patch/source/3rdparty/qtcsh/sh.proc.c	2024-10-22 14:54:38.245234713 +0700
+@@ -149,11 +149,7 @@
+     struct process *pp;
+     struct process *fp;
+     pid_t pid;
+-#ifdef BSDWAIT
+-    union wait w;
+-#else /* !BSDWAIT */
+     int     w;
+-#endif /* !BSDWAIT */
+     int     jobflags;
+ #ifdef BSDTIMES
+     struct sysrusage ru;
+@@ -188,13 +184,8 @@
+         (setintr && (intty || insource) ? WNOHANG | WUNTRACED : WNOHANG), &ru);
+ #   else
+     /* both a wait3 and rusage */
+-#    if !defined(BSDWAIT) || defined(NeXT) || defined(MACH) || defined(linux) || defined(__GNU__) || defined(__GLIBC__) || (defined(IRIS4D) && SYSVREL <= 3) || defined(__lucid) || defined(__osf__)
+     pid = wait3(&w,
+        (setintr && (intty || insource) ? WNOHANG | WUNTRACED : WNOHANG), &ru);
+-#    else /* BSDWAIT */
+-    pid = wait3(&w.w_status,
+-       (setintr && (intty || insource) ? WNOHANG | WUNTRACED : WNOHANG), &ru);
+-#    endif /* BSDWAIT */
+ #   endif /* convex */
+ #  else /* !BSDTIMES */
+ #   ifdef _SEQUENT_
+@@ -235,17 +226,9 @@
+ 	(setintr && (intty || insource) ? WNOHANG | WUNTRACED : WNOHANG), 0);
+ #   endif /* aiws || uts */
+ #   ifndef HAVEwait3
+-#    ifndef BSDWAIT
+      /* no wait3, therefore no rusage */
+      /* on Sys V, this may hang.  I hope it's not going to be a problem */
+     pid = wait(&w);
+-#    else /* BSDWAIT */
+-     /* 
+-      * XXX: for greater than 3 we should use waitpid(). 
+-      * but then again, SVR4 falls into the POSIX/BSDJOBS category.
+-      */
+-    pid = wait(&w.w_status);
+-#    endif /* BSDWAIT */
+ #   endif /* !HAVEwait3 */
+ #  endif	/* !BSDTIMES */
+ # endif /* !BSDJOBS */
+
+diff -ru org/source/3rdparty/qmake/make.h patch/source/3rdparty/qmake/make.h
+--- org/source/3rdparty/qmake/make.h	2016-02-28 23:58:45.000000000 +0700
++++ patch/source/3rdparty/qmake/make.h	2024-10-22 14:57:56.565238434 +0700
+@@ -348,7 +348,7 @@
+ #endif
+ #ifdef SET_STACK_SIZE
+ # include <sys/resource.h>
+-struct rlimit stack_limit;
++extern struct rlimit stack_limit;
+ #endif
+ 
+ struct floc
+
+diff -ru org/source/3rdparty/qmake/glob/glob.c patch/source/3rdparty/qmake/glob/glob.c
+--- org/source/3rdparty/qmake/glob/glob.c	2016-02-28 23:58:45.000000000 +0700
++++ patch/source/3rdparty/qmake/glob/glob.c	2024-10-22 15:01:32.478242485 +0700
+@@ -231,8 +231,13 @@
+ 
+ #endif
+ 
++#undef alloca
++#define alloca(n)	__builtin_alloca (n)
++#define __alloca	alloca
++
++#define __stat stat
++
+ #ifndef __GNU_LIBRARY__
+-# define __stat stat
+ # ifdef STAT_MACROS_BROKEN
+ #  undef S_ISDIR
+ # endif
