@@ -172,10 +172,10 @@
 	<package>roll-sge-usersguide</package>
 	<package>sge-insert-ethers</package>
 	<package>rocks-command-sge</package>
-	<package>compat-db47</package>
+	<!--package>compat-db47</package-->
 	<package>motif-devel</package>
 	<package>pam-devel</package>
-	<package>javacc</package>
+	<!--package>javacc</package-->
 	<package>libXp</package>
 	<package>libXp-devel</package>
 	<package>junit</package>
