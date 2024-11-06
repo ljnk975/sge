@@ -145,7 +145,6 @@
 
 import os
 import subprocess
-import commands
 import time
 import os.path
 import rocks.sql
@@ -172,17 +171,17 @@ class Plugin(rocks.sql.InsertEthersPlugin):
 		while not done:
 			cmd = '. /etc/profile.d/sge-binaries.sh ; ' + \
 				'qconf -ah %s' % (nodename)
-			(status, output) = commands.getstatusoutput(cmd)
+			(status, output) = subprocess.getstatusoutput(cmd)
 
-			commands.getstatusoutput(
+			subprocess.getstatusoutput(
 				'echo "status:%s" >> /tmp/sge_install.debug' \
-								% (status))
-			commands.getstatusoutput(
+								% (status.decode()))
+			subprocess.getstatusoutput(
 				'echo "output:%s" >> /tmp/sge_install.debug' \
-								% (output))
+								% (output.decode()))
 
 			if len(output) > len(failedmsg) and \
-					output[0:len(failedmsg)] == failedmsg:
+					output[0:len(failedmsg)].decode() == failedmsg:
 				done = 0
 			else:
 				done = 1
@@ -209,7 +208,7 @@ class Plugin(rocks.sql.InsertEthersPlugin):
 		adminhosts = []
 		cmd = '. /etc/profile.d/sge-binaries.sh ; qconf -sh'
 		for line in os.popen(cmd).readlines():
-			adminhosts.append(line.strip())
+			adminhosts.append(line.decode().strip())
 
 		#
 		# get a list of machines under SGE control
@@ -220,10 +219,9 @@ class Plugin(rocks.sql.InsertEthersPlugin):
 		w, r = (p.stdin, p.stdout)
 
 		for m in r.readlines():
-			machine = m.strip()
+			machine = m.decode().strip()
 
 			if machine not in adminhosts:
 				self.added(machine)
-
 		return
 
