@@ -180,6 +180,9 @@
 	<package>libXp-devel</package>
 	<package>junit</package>
 
+	<!-- ROCKS9: fix missing font for qmon -->
+	<package>xorg-x11-fonts-75dpi</package>
+	<package>xorg-x11-fonts-100dpi</package>
 <post>
 
 <file name="/opt/gridengine/mpi/rocks-mpi.template">
